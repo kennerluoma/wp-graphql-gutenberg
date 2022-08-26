@@ -21,6 +21,28 @@ class Block {
 				'fields' => [],
 				'interfaces' => ['Block']
 			]);
+			register_graphql_object_type('AcfBlock', [
+				'fields' => [
+					'attributesJSON' => [
+						'type' => 'String',
+						'description' => __('Block attributes, JSON encoded', 'wp-graphql-gutenberg'),
+						'resolve' => function ($block, $args, $context, $info) {
+
+							// if blockName starts with acf
+							if (strpos($block->name, 'acf/') === 0) {
+								// TODO: need lsit of all wysiwyg blocks to be rendered with wpautop
+								if (isset($block->attributes['data']['content'])) {
+									$content = $block->attributes['data']['content'];
+									$block->attributes['data']['content'] = wpautop($content);
+								}
+							}
+
+							return json_encode($block->attributes);
+						}
+					],
+				],
+				'interfaces' => ['Block']
+			]);
 			register_graphql_interface_type('Block', [
 				'description' => __('Gutenberg block interface', 'wp-graphql-gutenberg'),
 				'fields' => [
@@ -88,6 +110,9 @@ class Block {
 					$type = $type_registry->get_type(BlockTypes::format_block_name($block->name));
 					if ($type === null) {
 						return $type_registry->get_type('UnknownBlock');
+					}
+					if (strpos($block->name, 'acf/') === 0) {
+						return $type_registry->get_type('AcfBlock');
 					}
 					return $type;
 				}
